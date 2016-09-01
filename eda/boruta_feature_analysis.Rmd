@@ -1,0 +1,85 @@
+---
+title: "Boruta Feature Importance Analysis"
+author: "Jim Thompson"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup,message=FALSE,warning=FALSE}
+library(caret)
+library(data.table)
+library(Boruta)
+library(plyr)
+library(dplyr)
+library(pROC)
+
+ROOT.DIR <- ".."
+
+
+```
+
+
+### Data Prep for Bourta Analysis
+```{r dataprep,cache=TRUE}
+
+
+# retrive data for analysis
+sample.df <- read.csv(file.path(ROOT.DIR,"data/train.csv"),stringsAsFactors = FALSE)
+
+load(file.path(ROOT.DIR,"eda/parms/attr_data_types.RData"))
+
+
+# pull out the response variable
+response <- sample.df$SalePrice
+
+# remove identifier and response variables
+sample.df <- select(sample.df,-c(SalePrice,Id))
+
+# for numeric set missing values to -1 for purposes of the random forest run
+for (x in attr.data.types$contain.na){
+  sample.df[[x]][is.na(sample.df[[x]])] <- -1
+}
+
+for (x in attr.data.types$character){
+  sample.df[[x]][is.na(sample.df[[x]])] <- "*MISSING*"
+}
+
+
+
+```
+
+
+
+### Run Boruta Analysis
+```{r borutarun,cache=TRUE,dependson=c("dataprep")}
+
+set.seed(13)
+bor.results <- Boruta(sample.df,response,
+                   maxRuns=76,
+                   doTrace=0)
+
+# save Boruta results for later use
+save(bor.results,file=file.path(ROOT.DIR,"eda/parms/boruta_feature_analysis.RData"))
+```
+
+
+### Boruta results
+```{r borutaresults1,echo=FALSE}
+cat("\nsummary of Boruta run:\n")
+print(bor.results)
+
+cat("\n\nAttributes determined to be relevant:\n")
+getSelectedAttributes(bor.results)
+```
+
+The following plot shows the relevance of each feature.  
+```{r borutaplot,echo=FALSE,fig.width=9,fig.height=7}
+plot(bor.results)
+```
+
+Detailed results for each explanatory results
+```{r detailattrdump,echo=FALSE}
+cat("\n\nAttribute importance details:\n")
+options(width=125)
+arrange(cbind(attr=rownames(attStats(bor.results)), attStats(bor.results)),desc(medianImp))
+```
