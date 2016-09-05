@@ -96,7 +96,7 @@ prepL0FeatureSet1 <- function(df) {
     }
     
     
-    predictor_vars <- CONFIRMED_ATTR
+    predictor_vars <- c(CONFIRMED_ATTR)
     
     predictors <- df[predictor_vars]
     
@@ -255,9 +255,9 @@ write.csv(submission,file="gbm_sumbission.csv",row.names=FALSE)
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="xgbTree")   
 
-CARET.TUNE.GRID <-  expand.grid(nrounds=1200, 
+CARET.TUNE.GRID <-  expand.grid(nrounds=800, 
                                 max_depth=10, 
-                                eta=0.01, 
+                                eta=0.03, 
                                 gamma=0.1, 
                                 colsample_bytree=0.4, 
                                 min_child_weight=1)
