@@ -17,7 +17,7 @@ library(Metrics)
 
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
-ROOT.DIR <- "../.." #getwd()
+ROOT.DIR <- getwd()
 
 DATA.DIR <- paste(ROOT.DIR,"data",sep="/")
 ```
@@ -370,7 +370,10 @@ L1FeatureSet <- list()
 
 L1FeatureSet$train$id <- do.call(c,lapply(gbm_set,function(x){x$predictions$ID}))
 L1FeatureSet$train$y <- do.call(c,lapply(gbm_set,function(x){x$predictions$y}))
-L1FeatureSet$train$predictors <- data.frame(gbm_yhat,xgb_yhat,rngr_yhat)
+predictors <- data.frame(gbm_yhat,xgb_yhat,rngr_yhat)
+predictors_rank <- t(apply(predictors,1,rank))
+colnames(predictors_rank) <- paste0("rank_",names(predictors))
+L1FeatureSet$train$predictors <- predictors #cbind(predictors,predictors_rank)
 
 L1FeatureSet$test$id <- gbm_submission[,"Id"]
 L1FeatureSet$test$predictors <- data.frame(gbm_yhat=test_gbm_yhat,
@@ -383,7 +386,7 @@ L1FeatureSet$test$predictors <- data.frame(gbm_yhat=test_gbm_yhat,
 Public Leaderboard Score:
 ```{r }
 # set caret training parameters
-CARET.TRAIN.PARMS <- list(method="gbm") 
+CARET.TRAIN.PARMS <- list(method="nnet") 
 
 CARET.TUNE.GRID <-  NULL  # NULL provides model specific default tuning parameters
 
@@ -396,10 +399,10 @@ CARET.TRAIN.CTRL <- trainControl(method="repeatedcv",
 CARET.TRAIN.OTHER.PARMS <- list(trControl=CARET.TRAIN.CTRL,
                             maximize=FALSE,
                            tuneGrid=CARET.TUNE.GRID,
-                           tuneLength=5,
+                           tuneLength=7,
                            metric="RMSE")
 
-MODEL.SPECIFIC.PARMS <- list(verbose=FALSE) #NULL # Other model specific parameters
+MODEL.SPECIFIC.PARMS <- list(verbose=FALSE,linout=TRUE) #NULL # Other model specific parameters
 
 
 # train the model
