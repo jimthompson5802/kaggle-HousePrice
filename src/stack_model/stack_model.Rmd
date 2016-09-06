@@ -318,7 +318,7 @@ CARET.TRAIN.PARMS <- list(method="ranger")
 
 CARET.TUNE.GRID <-  expand.grid(mtry=3*as.integer(sqrt(ncol(L0FeatureSet1$train$predictors))))
 
-MODEL.SPECIFIC.PARMS <- list(verbose=0,num.trees=1000) #NULL # Other model specific parameters
+MODEL.SPECIFIC.PARMS <- list(verbose=0,num.trees=100) #NULL # Other model specific parameters
 
 # model specific training parameter
 CARET.TRAIN.CTRL <- trainControl(method="none",
