@@ -14,27 +14,113 @@ library(xgboost)
 library(ranger)
 library(nnet)
 library(Metrics)
+library(ggplot2)
 
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
-ROOT.DIR <- getwd()
+ROOT.DIR <- "../.." #getwd()
 
 DATA.DIR <- paste(ROOT.DIR,"data",sep="/")
 ```
-This is an example of a stack generaliztion model.  A 5-fold cross-validation strategy is
-used for model fitting.  The model is fitted to using the log of SalePrice as
-the target variable.
 
-Level 0 models consist of
+An ensemble model approach is used in this paper to generate the submission data set
+for the Kaggle __House Price__ competition.  Ensemble modeling involves training 
+multiple models and combining their predictions to arrive at the overall 
+predictions that are submitted to Kaggle. The specific ensemble approach taken is called model stacking.
 
-* gbm
-* xgboost
-* Random Forest
+The diagram below shows the high-level model stacking architecture, which is composed
+of two stages. The top-level stage, called Level 0, is composed of
+three modeling algorithms:
+Gradient Boosting (gbm), Extreme Gradient Boosting (xgb) and Random Forest (rngr).
+The second stage, Level 1, is composed of a single Neural Network (nnet) model.  The 
+predictions from Level 1 are used to create the Kaggle submission data set.
 
-Level 1 model 
+__Feature Sets__ in the diagram reprsents one or more sets of features created for the Level 0
+models.
 
-* Neural Net
-* gbm
+```{r,fig.height=5,fig.width=5,fig.align='center',echo=FALSE}
+
+prediction_arrow <- arrow(length=(unit(0.15,"inches")))
+
+ggplot() +
+  xlim(0,5) + ylim(0,5) +
+  scale_fill_discrete(name="Model Stage") +
+  
+  # Level 0 Models
+  geom_rect(aes(xmin=0.5,ymin=3,xmax=1.5,ymax=4,fill="Level 0")) +
+  geom_text(aes(x=1,y=3.5,label="gbm")) +
+  geom_rect(aes(xmin=2,ymin=3,xmax=3,ymax=4,fill="Level 0")) +
+  geom_text(aes(x=2.5,y=3.5,label="xgb")) +
+  geom_rect(aes(xmin=3.5,ymin=3,xmax=4.5,ymax=4,fill="Level 0")) +
+  geom_text(aes(x=4,y=3.5,label="rngr")) +
+  
+  #Level 1 Model
+  geom_rect(aes(xmin=2,ymin=1,xmax=3,ymax=2,fill="Level 1")) +
+  geom_text(aes(x=2.5,y=1.5,label="nnet")) +
+  
+  #Feature Set
+  geom_rect(aes(xmin=0.5,ymin=4.5,xmax=4.5,ymax=5),alpha=0.25) +
+  geom_text(aes(x=2.5,y=4.75,label="Feature Sets")) +
+  
+  # prediction lines
+  geom_segment(aes(x=1,y=4.5,xend=1,yend=4),arrow=prediction_arrow) +
+  geom_segment(aes(x=1,y=3,xend=2.25,yend=2),arrow=prediction_arrow) +
+  
+  geom_segment(aes(x=2.5,y=4.5,xend=2.5,yend=4),arrow=prediction_arrow) +
+  geom_segment(aes(x=2.5,y=3,xend=2.5,yend=2),arrow=prediction_arrow) +
+  
+  geom_segment(aes(x=4,y=4.5,xend=4,yend=4),arrow=prediction_arrow) +
+  geom_segment(aes(x=4,y=3,xend=2.75,yend=2),arrow=prediction_arrow) +
+  
+  geom_segment(aes(x=2.5,y=1,xend=2.5,yend=0.5),arrow=prediction_arrow) +
+  
+  geom_text(aes(x=2.5,y=2.75,label="Level 0 Model Predictions",fontface="bold")) +
+  geom_text(aes(x=2.5,y=0.35,label="Level 1 Model Prediction",fontface="bold")) +
+  
+  theme(
+    panel.background=element_blank(),
+    axis.title=element_blank(),
+    axis.text=element_blank(),
+    axis.ticks=element_blank()
+  )
+ 
+  
+
+```
+
+
+
+The following chart shows the model performance of the individual Level 0 models 
+versus the overall stacked model.
+```{r,echo=FALSE,fig.align='center',results='hide'}
+plb_data <- read.csv(textConnection(
+'Model,PLB_Score,Level
+gbm,0.12852,"Level 0"
+xgb,0.13696,"Level 0"
+rngr,0.14703,"Level 0"
+nnet,0.12678,"Level 1"'
+),stringsAsFactors = FALSE)
+
+plb_data
+
+ggplot(data=plb_data) +
+  geom_bar(aes(x=reorder(Model,-PLB_Score),y=PLB_Score,fill=Level),
+           stat="identity") +
+  geom_text(aes(x=reorder(Model,-PLB_Score),y=PLB_Score,label=PLB_Score),vjust=-0.25) +
+  scale_fill_discrete(name="Model Stage") +
+  ylab("Public Leaderboard Score") +
+  xlab("Model") 
+  
+```
+
+
+For additional information on model stacking see these references:
+
+* [MLWave: Kaggle Ensembling Guide](http://mlwave.com/kaggle-ensembling-guide/)
+* [Kaggle Forum Posting: Stacking](https://www.kaggle.com/forums/f/208/getting-started/t/18153/stacking/103381)
+* [Winning Data Science Competitions: Jeong-Yoon Lee](https://www.youtube.com/watch?v=ClAZQI_B4t8)  This talk is about 90 minutes long.  The sections relevant to model stacking are discussed in 
+these segments (h:mm:ss to h:mm:ss): 1:05:25 to 1:12:15 and 1:21:30 to 1:27:00.
+
 
 # Data Preparation
 
@@ -89,9 +175,23 @@ data_folds <- createFolds(train.raw$SalePrice, k=5)
 ```
 
 
-## Create Feature Sets
+## Create Level 0 Model Feature Sets
+
+For this work, two feature sets were created.  Both of these sets included Boruta
+Confirmed and Tentative attributes.
+
+Each feature set is created by a specific user-defined R function.  These functions
+convert the raw training data into a feature set.
+
+No extensive feature engineering was performed.  Missing values are handled as 
+follows:
+
+* Numeric: set to -1
+* Character: set to "*MISSING*"
+
+Character attributes are converted to R factor variables.  
 ```{r PrepareFeatureSets}
-# Feature Set 1 - Boruta Confirmed Attributes
+# Feature Set 1 - Boruta Confirmed and tentative Attributes
 prepL0FeatureSet1 <- function(df) {
     id <- df$Id
     if (class(df$SalePrice) != "NULL") {
@@ -165,11 +265,11 @@ L0FeatureSet2 <- list(train=prepL0FeatureSet2(train.raw),
 ```{r}
 #train model on one data fold
 trainOneFold <- function(this_fold,feature_set) {
-    # get fold specific test data
-    test.data <- list()
-    test.data$predictors <- feature_set$train$predictors[this_fold,]
-    test.data$ID <- feature_set$train$id[this_fold]
-    test.data$y <- feature_set$train$y[this_fold]
+    # get fold specific cv data
+    cv.data <- list()
+    cv.data$predictors <- feature_set$train$predictors[this_fold,]
+    cv.data$ID <- feature_set$train$id[this_fold]
+    cv.data$y <- feature_set$train$y[this_fold]
     
     # get training data for specific fold
     train.data <- list()
@@ -184,13 +284,13 @@ trainOneFold <- function(this_fold,feature_set) {
                         MODEL.SPECIFIC.PARMS,
                         CARET.TRAIN.OTHER.PARMS))
     
-    yhat <- predict(fitted_mdl,newdata = test.data$predictors,type = "raw")
+    yhat <- predict(fitted_mdl,newdata = cv.data$predictors,type = "raw")
     
-    score <- rmse(test.data$y,yhat)
+    score <- rmse(cv.data$y,yhat)
     
     ans <- list(fitted_mdl=fitted_mdl,
                 score=score,
-                predictions=data.frame(ID=test.data$ID,yhat=yhat,y=test.data$y))
+                predictions=data.frame(ID=cv.data$ID,yhat=yhat,y=cv.data$y))
     
     return(ans)
     
@@ -208,7 +308,7 @@ makeOneFoldTestPrediction <- function(this_fold,feature_set) {
 
 
 ### gbm Model
-Public Leaderboard Score: 
+Public Leaderboard Score: `r filter(plb_data,Model=="gbm")$PLB_Score`
 ```{r ,eval=TRUE}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="gbm")   
@@ -240,9 +340,9 @@ gbm_mdl <- do.call(train,
                  CARET.TRAIN.OTHER.PARMS))
 
 # CV Error Estimate
-test_y <- do.call(c,lapply(gbm_set,function(x){x$predictions$y}))
-test_yhat <- do.call(c,lapply(gbm_set,function(x){x$predictions$yhat}))
-rmse(test_y,test_yhat)
+cv_y <- do.call(c,lapply(gbm_set,function(x){x$predictions$y}))
+cv_yhat <- do.call(c,lapply(gbm_set,function(x){x$predictions$yhat}))
+rmse(cv_y,cv_yhat)
 cat("Average CV rmse:",mean(do.call(c,lapply(gbm_set,function(x){x$score}))))
 
 
@@ -259,7 +359,7 @@ write.csv(gbm_submission,file="gbm_sumbission.csv",row.names=FALSE)
 
 
 ### xgboost Model
-Public Leader Board Score: 
+Public Leader Board Score: `r filter(plb_data,Model=="xgb")$PLB_Score`
 ```{r ,eval=TRUE}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="xgbTree")   
@@ -312,14 +412,14 @@ write.csv(xgb_submission,file="xgb_sumbission.csv",row.names=FALSE)
 
 
 ### ranger Model
-Public Leader Board Score: 
+Public Leader Board Score: `r filter(plb_data,Model=="rngr")$PLB_Score`
 ```{r ,eval=TRUE}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="ranger")   
 
-CARET.TUNE.GRID <-  expand.grid(mtry=3*as.integer(sqrt(ncol(L0FeatureSet1$train$predictors))))
+CARET.TUNE.GRID <-  expand.grid(mtry=2*as.integer(sqrt(ncol(L0FeatureSet1$train$predictors))))
 
-MODEL.SPECIFIC.PARMS <- list(verbose=0,num.trees=100) #NULL # Other model specific parameters
+MODEL.SPECIFIC.PARMS <- list(verbose=0,num.trees=500) #NULL # Other model specific parameters
 
 # model specific training parameter
 CARET.TRAIN.CTRL <- trainControl(method="none",
@@ -384,7 +484,7 @@ L1FeatureSet$test$predictors <- data.frame(gbm_yhat=test_gbm_yhat,
 
 
 ### Neural Net Model
-Public Leaderboard Score:
+Public Leaderboard Score:  `r filter(plb_data,Model=="nnet")$PLB_Score`
 ```{r }
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="nnet") 
@@ -418,8 +518,9 @@ cat("Average CV rmse:",mean(l1_nnet_mdl$resample$RMSE),"\n")
 
 test_l1_nnet_yhat <- predict(l1_nnet_mdl,newdata = L1FeatureSet$test$predictors,type = "raw")
 l1_nnet_submission <- cbind(Id=L1FeatureSet$test$id,SalePrice=exp(test_l1_nnet_yhat))
+colnames(l1_nnet_submission) <- c("Id","SalePrice")
 
-write.csv(l1_nnet_submission,file="l1_nnet_sumbission.csv",row.names=FALSE)
+write.csv(l1_nnet_submission,file="l1_nnet_submission.csv",row.names=FALSE)
 
 
 ```
