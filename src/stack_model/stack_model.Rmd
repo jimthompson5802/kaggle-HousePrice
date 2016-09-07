@@ -1,5 +1,5 @@
 ---
-title: "Stack Model Example"
+title: "Ensemble Modeling: Stack Model Example"
 author: "J. Thompson"
 date: "September 6, 2016"
 output: html_document
@@ -121,6 +121,13 @@ ggplot(data=plb_data) +
 From the above chart we see that the Level 1 model is a `r sprintf("%.2f",pct_reduction)`%
 improvement over the best performing Level 0 model.
 
+Some ways for improving perfomance are
+
+* Additional Level 0 models using different algorithms
+* Hyper-parameter tuning
+* Improving features set through feature engineering
+* Additional levels in the model structure
+
 For additional information on model stacking see these references:
 
 * [MLWave: Kaggle Ensembling Guide](http://mlwave.com/kaggle-ensembling-guide/)
@@ -128,6 +135,10 @@ For additional information on model stacking see these references:
 * [Winning Data Science Competitions: Jeong-Yoon Lee](https://www.youtube.com/watch?v=ClAZQI_B4t8)  This talk is about 90 minutes long.  The sections relevant to model stacking are discussed in 
 these segments (h:mm:ss to h:mm:ss): 1:05:25 to 1:12:15 and 1:21:30 to 1:27:00.
 
+The remainder of this paper demonstrates the model stacking training pipeline.  First we 
+show an approach for creating model feature sets.  Next we demonstrate an approach for
+training Level 0 models using the [caret package](https://cran.r-project.org/web/packages/caret/index.html). 
+Then we end with creating features for the Level 1 model and creating the Kaggle submission data set.
 
 # Data Preparation
 
@@ -194,7 +205,7 @@ No extensive feature engineering was performed.  Missing values are handled as
 follows:
 
 * Numeric: set to -1
-* Character: set to "*MISSING*"
+* Character: set to "\*MISSING\*"
 
 Character attributes are converted to R factor variables.  
 ```{r PrepareFeatureSets}
@@ -531,47 +542,3 @@ write.csv(l1_nnet_submission,file="l1_nnet_submission.csv",row.names=FALSE)
 
 
 ```
-
-
-
-### gbm Model
-Public Leaderboard Score:
-```{r }
-# set caret training parameters
-CARET.TRAIN.PARMS <- list(method="gbm") 
-
-CARET.TUNE.GRID <-  NULL  # NULL provides model specific default tuning parameters
-
-# model specific training parameter
-CARET.TRAIN.CTRL <- trainControl(method="repeatedcv",
-                                 number=5,
-                                 repeats=1,
-                                 verboseIter=FALSE)
-
-CARET.TRAIN.OTHER.PARMS <- list(trControl=CARET.TRAIN.CTRL,
-                            maximize=FALSE,
-                           tuneGrid=CARET.TUNE.GRID,
-                           tuneLength=7,
-                           metric="RMSE")
-
-MODEL.SPECIFIC.PARMS <- list(verbose=FALSE) #NULL # Other model specific parameters
-
-
-# train the model
-set.seed(825)
-l1_gbm_mdl <- do.call(train,c(list(x=L1FeatureSet$train$predictors,y=L1FeatureSet$train$y),
-                            CARET.TRAIN.PARMS,
-                            MODEL.SPECIFIC.PARMS,
-                            CARET.TRAIN.OTHER.PARMS))
-
-l1_gbm_mdl
-cat("Average CV rmse:",mean(l1_gbm_mdl$resample$RMSE),"\n")
-
-test_l1_gbm_yhat <- predict(l1_gbm_mdl,newdata = L1FeatureSet$test$predictors,type = "raw")
-l1_gbm_submission <- cbind(Id=L1FeatureSet$test$id,SalePrice=exp(test_l1_gbm_yhat))
-
-write.csv(l1_gbm_submission,file="l1_gbm_sumbission.csv",row.names=FALSE)
-
-
-```
-
