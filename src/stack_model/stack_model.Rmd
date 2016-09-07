@@ -92,6 +92,7 @@ ggplot() +
 
 The following chart shows the model performance of the individual Level 0 models 
 versus the overall stacked model.
+
 ```{r,echo=FALSE,fig.align='center',results='hide'}
 plb_data <- read.csv(textConnection(
 'Model,PLB_Score,Level
@@ -103,16 +104,22 @@ nnet,0.12678,"Level 1"'
 
 plb_data
 
+pct_reduction <- 100*(1 - filter(plb_data,Model=="nnet")$PLB_Score/filter(plb_data,Model=="gbm")$PLB_Score)
+
+
 ggplot(data=plb_data) +
   geom_bar(aes(x=reorder(Model,-PLB_Score),y=PLB_Score,fill=Level),
            stat="identity") +
   geom_text(aes(x=reorder(Model,-PLB_Score),y=PLB_Score,label=PLB_Score),vjust=-0.25) +
   scale_fill_discrete(name="Model Stage") +
   ylab("Public Leaderboard Score") +
-  xlab("Model") 
+  xlab("Model") +
+  ggtitle("Kaggle Public Leaderboard Scores")
   
 ```
 
+From the above chart we see that the Level 1 model is a `r sprintf("%.2f",pct_reduction)`%
+improvement over the best performing Level 0 model.
 
 For additional information on model stacking see these references:
 
