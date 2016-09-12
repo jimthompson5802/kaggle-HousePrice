@@ -18,24 +18,24 @@ library(ggplot2)
 
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
-ROOT.DIR <- "../.." #getwd()
+ROOT.DIR <- ".." #getwd()
 
-DATA.DIR <- paste(ROOT.DIR,"data",sep="/")
+DATA.DIR <- paste(ROOT.DIR,"input",sep="/")
 ```
 
-An ensemble model approach is used in this paper to generate the submission data set
+This paper illustrates an ensemble model approach to generate the submission data set
 for the Kaggle __House Price__ competition.  Ensemble modeling involves training 
-multiple models and combining their predictions to arrive at the overall 
-predictions that are submitted to Kaggle. The specific ensemble approach taken is called model stacking.
+multiple models and combining their predictions to derive the 
+predictions submitted to Kaggle. The specific ensemble approach illustrated is called model stacking.
 
 The diagram below shows the high-level model stacking architecture, which is composed
 of two stages. The top-level stage, called Level 0, is composed of
 three modeling algorithms:
-Extreme Gradient Boosting (xgb) and Random Forest (rngr).
+Gradient Boosting (gbm), Extreme Gradient Boosting (xgb) and Random Forest (rngr).
 The second stage, Level 1, is composed of a single Neural Network (nnet) model.  The 
 predictions from Level 1 are used to create the Kaggle submission data set.
 
-__Feature Sets__ in the diagram reprsents one or more sets of features created for the Level 0
+__Feature Sets__ in the diagram reprsents one or more sets of attributes created for the Level 0
 models.
 
 ```{r,fig.height=5,fig.width=5,fig.align='center',echo=FALSE}
@@ -48,7 +48,9 @@ ggplot() +
   
   # Level 0 Models
   geom_rect(aes(xmin=0.5,ymin=3,xmax=1.5,ymax=4,fill="Level 0")) +
-  geom_text(aes(x=1,y=3.5,label="xgb")) +
+  geom_text(aes(x=1,y=3.5,label="gbm")) +
+  geom_rect(aes(xmin=2,ymin=3,xmax=3,ymax=4,fill="Level 0")) +
+  geom_text(aes(x=2.5,y=3.5,label="xgb")) +
   geom_rect(aes(xmin=3.5,ymin=3,xmax=4.5,ymax=4,fill="Level 0")) +
   geom_text(aes(x=4,y=3.5,label="rngr")) +
   
@@ -63,6 +65,9 @@ ggplot() +
   # prediction lines
   geom_segment(aes(x=1,y=4.5,xend=1,yend=4),arrow=prediction_arrow) +
   geom_segment(aes(x=1,y=3,xend=2.25,yend=2),arrow=prediction_arrow) +
+  
+  geom_segment(aes(x=2.5,y=4.5,xend=2.5,yend=4),arrow=prediction_arrow) +
+  geom_segment(aes(x=2.5,y=3,xend=2.5,yend=2),arrow=prediction_arrow) +
   
   geom_segment(aes(x=4,y=4.5,xend=4,yend=4),arrow=prediction_arrow) +
   geom_segment(aes(x=4,y=3,xend=2.75,yend=2),arrow=prediction_arrow) +
@@ -91,14 +96,15 @@ versus the overall stacked model.
 ```{r,echo=FALSE,fig.align='center',results='hide'}
 plb_data <- read.csv(textConnection(
 'Model,PLB_Score,Level
+gbm,0.12852,"Level 0"
 xgb,0.13696,"Level 0"
 rngr,0.14703,"Level 0"
-nnet,0.13278,"Level 1"'
+nnet,0.12678,"Level 1"'
 ),stringsAsFactors = FALSE)
 
 plb_data
 
-pct_reduction <- 100*(1 - filter(plb_data,Model=="nnet")$PLB_Score/filter(plb_data,Model=="xgb")$PLB_Score)
+pct_reduction <- 100*(1 - filter(plb_data,Model=="nnet")$PLB_Score/filter(plb_data,Model=="gbm")$PLB_Score)
 
 
 ggplot(data=plb_data) +
@@ -115,12 +121,18 @@ ggplot(data=plb_data) +
 From the above chart we see that the Level 1 model is a `r sprintf("%.2f",pct_reduction)`%
 improvement over the best performing Level 0 model.
 
-Some ways for improving perfomance are
+To fit within the constraints of Kaggle's Kernel offering, a simplified structure for
+the stacked model was used in this report.  The specific simplications are
 
-* Additional Level 0 models using different algorithms
-* Hyper-parameter tuning
-* Improving features set through feature engineering
-* Additional levels in the model structure
+* Limit Level 0 to three models 
+* LImit Level 1 to one model
+
+Improvements in stacked model performance can be accomplished by
+
+* Adding models to Level 0 and Level 1 using different algorithms
+* Tuning model Hyper-parameters
+* Adding feature sets by feature engineering
+* Adding levels in the model structure
 
 For additional information on model stacking see these references:
 
@@ -182,7 +194,7 @@ names(DATA_ATTR_TYPES) <- unique_data_types
 
 # create folds for training
 set.seed(13)
-data_folds <- createFolds(train.raw$SalePrice, k=2)
+data_folds <- createFolds(train.raw$SalePrice, k=5)
 
 ```
 
@@ -319,6 +331,57 @@ makeOneFoldTestPrediction <- function(this_fold,feature_set) {
 ```
 
 
+### gbm Model
+Public Leaderboard Score: `r filter(plb_data,Model=="gbm")$PLB_Score`
+```{r trainL0gbm,eval=TRUE}
+# set caret training parameters
+CARET.TRAIN.PARMS <- list(method="gbm")   
+
+CARET.TUNE.GRID <-  expand.grid(n.trees=100, 
+                                interaction.depth=10, 
+                                shrinkage=0.1,
+                                n.minobsinnode=10)
+
+MODEL.SPECIFIC.PARMS <- list(verbose=0) #NULL # Other model specific parameters
+
+# model specific training parameter
+CARET.TRAIN.CTRL <- trainControl(method="none",
+                                 verboseIter=FALSE,
+                                 classProbs=FALSE)
+
+CARET.TRAIN.OTHER.PARMS <- list(trControl=CARET.TRAIN.CTRL,
+                           tuneGrid=CARET.TUNE.GRID,
+                           metric="RMSE")
+
+# generate features for Level 1
+gbm_set <- llply(data_folds,trainOneFold,L0FeatureSet1)
+
+# final model fit
+gbm_mdl <- do.call(train,
+                 c(list(x=L0FeatureSet1$train$predictors,y=L0FeatureSet1$train$y),
+                 CARET.TRAIN.PARMS,
+                 MODEL.SPECIFIC.PARMS,
+                 CARET.TRAIN.OTHER.PARMS))
+
+# CV Error Estimate
+cv_y <- do.call(c,lapply(gbm_set,function(x){x$predictions$y}))
+cv_yhat <- do.call(c,lapply(gbm_set,function(x){x$predictions$yhat}))
+rmse(cv_y,cv_yhat)
+cat("Average CV rmse:",mean(do.call(c,lapply(gbm_set,function(x){x$score}))))
+
+
+# create test submission.
+# A prediction is made by averaging the predictions made by using the models
+# fitted for each fold.
+
+test_gbm_yhat <- predict(gbm_mdl,newdata = L0FeatureSet1$test$predictors,type = "raw")
+gbm_submission <- cbind(Id=L0FeatureSet1$test$id,SalePrice=exp(test_gbm_yhat))
+write.csv(gbm_submission,file="gbm_sumbission.csv",row.names=FALSE)
+
+
+```
+
+
 ### xgboost Model
 Public Leader Board Score: `r filter(plb_data,Model=="xgb")$PLB_Score`
 ```{r trainL0xgb,eval=TRUE}
@@ -422,22 +485,24 @@ write.csv(rngr_submission,file="rngr_sumbission.csv",row.names=FALSE)
 ## Level 1 Model Training
 
 ### Create predictions For Level 1 Model
-```{r prepL1Features}
+```{r}
+gbm_yhat <- do.call(c,lapply(gbm_set,function(x){x$predictions$yhat}))
 xgb_yhat <- do.call(c,lapply(xgb_set,function(x){x$predictions$yhat}))
 rngr_yhat <- do.call(c,lapply(rngr_set,function(x){x$predictions$yhat}))
 
 # create Feature Set
 L1FeatureSet <- list()
 
-L1FeatureSet$train$id <- do.call(c,lapply(xgb_set,function(x){x$predictions$ID}))
-L1FeatureSet$train$y <- do.call(c,lapply(xgb_set,function(x){x$predictions$y}))
-predictors <- data.frame(xgb_yhat,rngr_yhat)
+L1FeatureSet$train$id <- do.call(c,lapply(gbm_set,function(x){x$predictions$ID}))
+L1FeatureSet$train$y <- do.call(c,lapply(gbm_set,function(x){x$predictions$y}))
+predictors <- data.frame(gbm_yhat,xgb_yhat,rngr_yhat)
 predictors_rank <- t(apply(predictors,1,rank))
 colnames(predictors_rank) <- paste0("rank_",names(predictors))
 L1FeatureSet$train$predictors <- predictors #cbind(predictors,predictors_rank)
 
-L1FeatureSet$test$id <- xgb_submission[,"Id"]
-L1FeatureSet$test$predictors <- data.frame(xgb_yhat=test_xgb_yhat,
+L1FeatureSet$test$id <- gbm_submission[,"Id"]
+L1FeatureSet$test$predictors <- data.frame(gbm_yhat=test_gbm_yhat,
+                                      xgb_yhat=test_xgb_yhat,
                                       rngr_yhat=test_rngr_yhat)
 ```
 
@@ -481,5 +546,3 @@ colnames(l1_nnet_submission) <- c("Id","SalePrice")
 
 write.csv(l1_nnet_submission,file="l1_nnet_submission.csv",row.names=FALSE)
 
-
-```
