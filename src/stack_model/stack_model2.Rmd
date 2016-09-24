@@ -18,9 +18,9 @@ library(ggplot2)
 
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
-ROOT.DIR <- ".." #getwd()
+ROOT.DIR <- "../.." #getwd()
 
-DATA.DIR <- paste(ROOT.DIR,"input",sep="/")
+DATA.DIR <- paste(ROOT.DIR,"data",sep="/")
 ```
 
 This paper illustrates an ensemble model approach to generate the submission data set
