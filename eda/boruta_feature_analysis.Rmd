@@ -82,7 +82,7 @@ for (x in attr.data.types$character){
 
 set.seed(13)
 bor.results <- Boruta(sample.df,response,
-                   maxRuns=101,
+                   maxRuns=151,
                    doTrace=0)
 ```
 
