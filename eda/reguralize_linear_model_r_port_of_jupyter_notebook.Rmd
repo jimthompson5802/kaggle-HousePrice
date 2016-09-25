@@ -159,7 +159,7 @@ CARET.TRAIN.CTRL <- trainControl(method="repeatedcv",
 
 # test out Ridge regression model
 
-lambdas <- seq(0,1,0.001)
+lambdas <- seq(1,0,-0.001)
 
 # train model
 set.seed(123)  # for reproducibility
