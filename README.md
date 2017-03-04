@@ -14,9 +14,7 @@ Kaggle competition https://www.kaggle.com/c/house-prices-advanced-regression-tec
 
 
 ## Directory Overview
-* **src** - contains R and Python source code to build and test models and to 
-create Kaggle submissions
-* **eda** - contains code for exploratory data analysis and extract data required
-for creating features.
+* **src** - contains R source code to build and test models and create Kaggle submissions
+* **eda** - contains code for exploratory data analysis
 
 
