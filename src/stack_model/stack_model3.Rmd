@@ -100,7 +100,7 @@ plb_data <- read.csv(textConnection(
 gbm,0.12852,"Level 0"
 xgb,0.13696,"Level 0"
 rngr,0.14703,"Level 0"
-L1nnet,0.12678,"Level 1"'
+nnet,0.12678,"Level 1"'
 ),stringsAsFactors = FALSE)
 
 plb_data
