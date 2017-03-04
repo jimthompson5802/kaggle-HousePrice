@@ -8,13 +8,10 @@ Kaggle competition https://www.kaggle.com/c/house-prices-advanced-regression-tec
 ## Results
 * Placed 202 (JMT5802) out of 4,915 teams.  Top 
 5% finisher.
-* Kernel for feature analysis to [determine relevant attributes for modeling.](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/boruta-feature-importance-analysis)
-* Kernel for illustrating a two-level stacked model.
-* Kernel for R-based regularized linear regression.
+* Kernel for feature analysis to [determine relevant attributes for modeling](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/boruta-feature-importance-analysis).
+* Kernel for illustrating a [two-level stacked model](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/ensemble-model-stacked-model-example).
+* Kernel for R-based [regularized linear regression](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/regularized-linear-models-in-r).
 
-## System Requirements
-* In addition to R, the Anaconda Python distribution, which includes pandas and 
-sci-kit learn, is required.  For this work Python 2.7 was used.
 
 ## Directory Overview
 * **src** - contains R and Python source code to build and test models and to 
