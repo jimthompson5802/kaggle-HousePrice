@@ -9,7 +9,7 @@ Placed 202 ([JMT5802](https://www.kaggle.com/jimthompson)) out of 4,915 teams on
 ## Key Artifacts
 * Kernel for feature analysis to [determine relevant modeling attributes](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/boruta-feature-importance-analysis).
 * Kernel for illustrating a [two-level stacked model](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/ensemble-model-stacked-model-example).  
-* Rmarkdown for a [three-level stacked model](https://github.com/jimthompson5802/kaggle-HousePrice/blob/master/src/stack_model/stack_model3.Rmd).  This [page shows the high-level structure of the model](https://github.com/jimthompson5802/kaggle-HousePrice/wiki), which is my best performing model.
+* Rmarkdown for a [three-level stacked model](https://github.com/jimthompson5802/kaggle-HousePrice/blob/master/src/stack_model/stack_model3.Rmd), which is my best performing model.  This [page shows the high-level structure of the model](https://github.com/jimthompson5802/kaggle-HousePrice/wiki).
 * Kernel for R-based [regularized linear regression](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/regularized-linear-models-in-r).
 
 
