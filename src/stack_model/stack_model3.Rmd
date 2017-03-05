@@ -36,7 +36,7 @@ predictions from Level 1 are blended at Level 2 by geometric weighting.
 __Feature Sets__ in the diagram reprsents one or more sets of attributes created for the Level 0
 models.
 
-```{r,fig.height=6,fig.width=5,fig.align='center',echo=FALSE}
+```{r,fig.height=6,fig.width=5,fig.align='center',echo=FALSE,fig.path='figure/'}
 
 prediction_arrow <- arrow(length=(unit(0.15,"inches")))
 
