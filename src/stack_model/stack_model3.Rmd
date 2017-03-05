@@ -1,7 +1,7 @@
 ---
-title: "Ensemble Modeling: Stack Model Example"
+title: "Ensemble Modeling: Three Level Stack Model Example"
 author: "J. Thompson"
-date: "September 6, 2016"
+date: "September 2016"
 output: html_document
 ---
 
@@ -24,17 +24,14 @@ ROOT.DIR <- "../.." #getwd()
 DATA.DIR <- paste(ROOT.DIR,"data",sep="/")
 ```
 
-This paper illustrates an ensemble model approach to generate the submission data set
-for the Kaggle __House Price__ competition.  Ensemble modeling involves training 
-multiple models and combining their predictions to derive the 
-predictions submitted to Kaggle. The specific ensemble approach illustrated is called model stacking.
+This paper extends this [Kernel](https://www.kaggle.com/jimthompson/house-prices-advanced-regression-techniques/ensemble-model-stacked-model-example) that illustrates a 2-stage stacked ensemble model to a 3-stage stacked ensemble model.
 
 The diagram below shows the high-level model stacking architecture, which is composed
-of two stages. The top-level stage, called Level 0, is composed of
+of three stages. The top-level stage, called Level 0, is composed of
 three modeling algorithms:
-Gradient Boosting (gbm), Extreme Gradient Boosting (xgb) and Random Forest (rngr).
-The second stage, Level 1, is composed of a single Neural Network (nnet) model.  The 
-predictions from Level 1 are used to create the Kaggle submission data set.
+Gradient Boosting (gbmL0), Extreme Gradient Boosting (xgbL0) and Random Forest (rngrL0).
+The second stage, Level 1, is composed of a Neural Network (nnetL1) model and Gradient Boosting (gmbL1).  The 
+predictions from Level 1 are blended at Level 2 by geometric weighting.
 
 __Feature Sets__ in the diagram reprsents one or more sets of attributes created for the Level 0
 models.
@@ -59,11 +56,11 @@ ggplot() +
     
   # Level 0 Models
   geom_rect(aes(xmin=0.5,ymin=4,xmax=1.5,ymax=5,fill="Level 0")) +
-  geom_text(aes(x=1,y=4.5,label="gbm")) +
+  geom_text(aes(x=1,y=4.5,label="gbmL0")) +
   geom_rect(aes(xmin=2,ymin=4,xmax=3,ymax=5,fill="Level 0")) +
-  geom_text(aes(x=2.5,y=4.5,label="xgb")) +
+  geom_text(aes(x=2.5,y=4.5,label="xgbL0")) +
   geom_rect(aes(xmin=3.5,ymin=4,xmax=4.5,ymax=5,fill="Level 0")) +
-  geom_text(aes(x=4,y=4.5,label="rngr")) +
+  geom_text(aes(x=4,y=4.5,label="rngrL0")) +
     
   # Prediction Lines Level0 to Level1
   geom_segment(aes(x=1,y=4,xend=3.15,yend=3),arrow=prediction_arrow) +
@@ -76,10 +73,10 @@ ggplot() +
     
   #Level 1 Model
   geom_rect(aes(xmin=2.75,ymin=2,xmax=3.75,ymax=3,fill="Level 1")) +
-  geom_text(aes(x=3.25,y=2.5,label="nnet")) +
+  geom_text(aes(x=3.25,y=2.5,label="nnetL1")) +
     
   geom_rect(aes(xmin=1.25,ymin=2,xmax=2.25,ymax=3,fill="Level 1")) +
-  geom_text(aes(x=1.75,y=2.5,label="gbm")) +
+  geom_text(aes(x=1.75,y=2.5,label="gbmL1")) +
     
   # Prediction Lines Level1 to Level2
   geom_segment(aes(x=1.75,y=2,xend=2.45,yend=1.5),arrow=prediction_arrow) +
@@ -94,7 +91,7 @@ ggplot() +
   
   geom_text(aes(x=2.5,y=3.5,label="Level 0 Model Predictions",fontface="bold")) +
   geom_text(aes(x=2.5,y=1.75,label="Level 1 Model Prediction",fontface="bold")) +
-  geom_text(aes(x=2.5,y=0.25,label="Final Prediction",fontface="bold")) +
+  geom_text(aes(x=2.5,y=0.20,label="Final Prediction",fontface="bold")) +
   
   theme(
     panel.background=element_blank(),
@@ -107,51 +104,6 @@ ggplot() +
 
 ```
 
-
-
-The following chart shows the model performance of the individual Level 0 models 
-versus the overall stacked model.
-
-```{r,echo=FALSE,fig.align='center',results='hide'}
-plb_data <- read.csv(textConnection(
-'Model,PLB_Score,Level
-gbm,0.12852,"Level 0"
-xgb,0.13696,"Level 0"
-rngr,0.14703,"Level 0"
-L1nnet,0.12678,"Level 1"'
-),stringsAsFactors = FALSE)
-
-plb_data
-
-pct_reduction <- 100*(1 - filter(plb_data,Model=="nnet")$PLB_Score/filter(plb_data,Model=="gbm")$PLB_Score)
-
-
-ggplot(data=plb_data) +
-  geom_bar(aes(x=reorder(Model,-PLB_Score),y=PLB_Score,fill=Level),
-           stat="identity") +
-  geom_text(aes(x=reorder(Model,-PLB_Score),y=PLB_Score,label=PLB_Score),vjust=-0.25) +
-  scale_fill_discrete(name="Model Stage") +
-  ylab("Public Leaderboard Score") +
-  xlab("Model") +
-  ggtitle("Kaggle Public Leaderboard Scores")
-  
-```
-
-From the above chart we see that the Level 1 model is a `r sprintf("%.2f",pct_reduction)`%
-improvement over the best performing Level 0 model.
-
-To fit within the constraints of Kaggle's Kernel offering, a simplified structure for
-the stacked model was used in this report.  The specific simplications are
-
-* Limit Level 0 to three models 
-* LImit Level 1 to one model
-
-Improvements in stacked model performance can be accomplished by
-
-* Adding models to Level 0 and Level 1 using different algorithms
-* Tuning model Hyper-parameters
-* Adding feature sets by feature engineering
-* Adding levels in the model structure
 
 For additional information on model stacking see these references:
 
@@ -351,7 +303,6 @@ makeOneFoldTestPrediction <- function(this_fold,feature_set) {
 
 
 ### gbm Model
-Public Leaderboard Score: `r filter(plb_data,Model=="gbm")$PLB_Score`
 ```{r trainL0gbm,eval=TRUE}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="gbm")   
@@ -402,7 +353,6 @@ write.csv(gbm_submission,file="gbm_sumbission.csv",row.names=FALSE)
 
 
 ### xgboost Model
-Public Leader Board Score: `r filter(plb_data,Model=="xgb")$PLB_Score`
 ```{r trainL0xgb,eval=TRUE}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="xgbTree")   
@@ -455,7 +405,6 @@ write.csv(xgb_submission,file="xgb_sumbission.csv",row.names=FALSE)
 
 
 ### ranger Model
-Public Leader Board Score: `r filter(plb_data,Model=="rngr")$PLB_Score`
 ```{r trainL0rngr,eval=TRUE}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="ranger")   
@@ -527,7 +476,6 @@ L1FeatureSet$test$predictors <- data.frame(gbm_yhat=test_gbm_yhat,
 
 
 ### Neural Net Model
-Public Leaderboard Score:  `r filter(plb_data,Model=="L1nnet")$PLB_Score`
 ```{r trainL1nnet}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="nnet") 
@@ -570,7 +518,6 @@ write.csv(l1_nnet_submission,file="l1_nnet_submission.csv",row.names=FALSE)
 
 
 ### gbm Model
-Public Leaderboard Score:  `r filter(plb_data,Model=="l1gbm")$PLB_Score`
 ```{r trainL1gbm}
 # set caret training parameters
 CARET.TRAIN.PARMS <- list(method="gbm") 
@@ -614,7 +561,7 @@ write.csv(l1_gbm_submission,file="l1_gbm_submission.csv",row.names=FALSE)
 
 ```
 
-Level 2 Model Blending
+## Level 2 Model Blending
 
 ```{r blendModels}
 l2_avg_yhat <- test_l1_nnet_yhat^0.9 * test_l1_gbm_yhat^0.1
