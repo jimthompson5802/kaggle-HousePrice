@@ -362,7 +362,8 @@ CARET.TUNE.GRID <-  expand.grid(nrounds=800,
                                 eta=0.03, 
                                 gamma=0.1, 
                                 colsample_bytree=0.4, 
-                                min_child_weight=1)
+                                min_child_weight=1,
+                                subsample=1)
 
 MODEL.SPECIFIC.PARMS <- list(verbose=0) #NULL # Other model specific parameters
 
