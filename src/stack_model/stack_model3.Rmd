@@ -39,44 +39,62 @@ predictions from Level 1 are used to create the Kaggle submission data set.
 __Feature Sets__ in the diagram reprsents one or more sets of attributes created for the Level 0
 models.
 
-```{r,fig.height=5,fig.width=5,fig.align='center',echo=FALSE}
+```{r,fig.height=6,fig.width=5,fig.align='center',echo=FALSE}
 
 prediction_arrow <- arrow(length=(unit(0.15,"inches")))
 
 ggplot() +
-  xlim(0,5) + ylim(0,5) +
+  xlim(0,5) + ylim(0,6) +
   scale_fill_discrete(name="Model Stage") +
-  
-  # Level 0 Models
-  geom_rect(aes(xmin=0.5,ymin=3,xmax=1.5,ymax=4,fill="Level 0")) +
-  geom_text(aes(x=1,y=3.5,label="gbm")) +
-  geom_rect(aes(xmin=2,ymin=3,xmax=3,ymax=4,fill="Level 0")) +
-  geom_text(aes(x=2.5,y=3.5,label="xgb")) +
-  geom_rect(aes(xmin=3.5,ymin=3,xmax=4.5,ymax=4,fill="Level 0")) +
-  geom_text(aes(x=4,y=3.5,label="rngr")) +
-  
-  #Level 1 Model
-  geom_rect(aes(xmin=2,ymin=1,xmax=3,ymax=2,fill="Level 1")) +
-  geom_text(aes(x=2.5,y=1.5,label="nnet")) +
-  
+    
   #Feature Set
-  geom_rect(aes(xmin=0.5,ymin=4.5,xmax=4.5,ymax=5),alpha=0.25) +
-  geom_text(aes(x=2.5,y=4.75,label="Feature Sets")) +
+  geom_rect(aes(xmin=0.5,ymin=5.5,xmax=4.5,ymax=6),alpha=0.25) +
+  geom_text(aes(x=2.5,y=5.75,label="Feature Sets")) +
+  geom_segment(aes(x=4,y=5.5,xend=4,yend=5),arrow=prediction_arrow) +
+    
+  # Feature Set Lines
+  geom_segment(aes(x=1,y=5.5,xend=1,yend=5),arrow=prediction_arrow) +
+  geom_segment(aes(x=2.5,y=5.5,xend=2.5,yend=5),arrow=prediction_arrow) +
+    
+    
+  # Level 0 Models
+  geom_rect(aes(xmin=0.5,ymin=4,xmax=1.5,ymax=5,fill="Level 0")) +
+  geom_text(aes(x=1,y=4.5,label="gbm")) +
+  geom_rect(aes(xmin=2,ymin=4,xmax=3,ymax=5,fill="Level 0")) +
+  geom_text(aes(x=2.5,y=4.5,label="xgb")) +
+  geom_rect(aes(xmin=3.5,ymin=4,xmax=4.5,ymax=5,fill="Level 0")) +
+  geom_text(aes(x=4,y=4.5,label="rngr")) +
+    
+  # Prediction Lines Level0 to Level1
+  geom_segment(aes(x=1,y=4,xend=3.15,yend=3),arrow=prediction_arrow) +
+  geom_segment(aes(x=2.5,y=4,xend=3.25,yend=3),arrow=prediction_arrow) +
+  geom_segment(aes(x=4,y=4,xend=3.35,yend=3),arrow=prediction_arrow) +
+    
+  geom_segment(aes(x=1,y=4,xend=1.65,yend=3),arrow=prediction_arrow) +
+  geom_segment(aes(x=2.5,y=4,xend=1.75,yend=3),arrow=prediction_arrow) +
+  geom_segment(aes(x=4,y=4,xend=1.85,yend=3),arrow=prediction_arrow) +
+    
+  #Level 1 Model
+  geom_rect(aes(xmin=2.75,ymin=2,xmax=3.75,ymax=3,fill="Level 1")) +
+  geom_text(aes(x=3.25,y=2.5,label="nnet")) +
+    
+  geom_rect(aes(xmin=1.25,ymin=2,xmax=2.25,ymax=3,fill="Level 1")) +
+  geom_text(aes(x=1.75,y=2.5,label="gbm")) +
+    
+  # Prediction Lines Level1 to Level2
+  geom_segment(aes(x=1.75,y=2,xend=2.45,yend=1.5),arrow=prediction_arrow) +
+  geom_segment(aes(x=3.25,y=2,xend=2.55,yend=1.5),arrow=prediction_arrow) +
+    
+  #Level 2 Model
+  geom_rect(aes(xmin=2,ymin=0.5,xmax=3,ymax=1.5,fill="Level 2")) +
+  geom_text(aes(x=2.5,y=1.0,label="geometric\nblend")) +
   
-  # prediction lines
-  geom_segment(aes(x=1,y=4.5,xend=1,yend=4),arrow=prediction_arrow) +
-  geom_segment(aes(x=1,y=3,xend=2.25,yend=2),arrow=prediction_arrow) +
+  # final prediction line
+  geom_segment(aes(x=2.5,y=0.5,xend=2.5,yend=0.25),arrow=prediction_arrow) +
   
-  geom_segment(aes(x=2.5,y=4.5,xend=2.5,yend=4),arrow=prediction_arrow) +
-  geom_segment(aes(x=2.5,y=3,xend=2.5,yend=2),arrow=prediction_arrow) +
-  
-  geom_segment(aes(x=4,y=4.5,xend=4,yend=4),arrow=prediction_arrow) +
-  geom_segment(aes(x=4,y=3,xend=2.75,yend=2),arrow=prediction_arrow) +
-  
-  geom_segment(aes(x=2.5,y=1,xend=2.5,yend=0.5),arrow=prediction_arrow) +
-  
-  geom_text(aes(x=2.5,y=2.75,label="Level 0 Model Predictions",fontface="bold")) +
-  geom_text(aes(x=2.5,y=0.35,label="Level 1 Model Prediction",fontface="bold")) +
+  geom_text(aes(x=2.5,y=3.5,label="Level 0 Model Predictions",fontface="bold")) +
+  geom_text(aes(x=2.5,y=1.75,label="Level 1 Model Prediction",fontface="bold")) +
+  geom_text(aes(x=2.5,y=0.25,label="Final Prediction",fontface="bold")) +
   
   theme(
     panel.background=element_blank(),
